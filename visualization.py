@@ -112,21 +112,19 @@ def selectionSort():
 Insertion sort
 '''
 def insertionSort():
-	global states
-	states = []
+	global tuples
+	tuples = []
 	arrCopy = arr.copy()
 	for i in range(1, NUM_BAR):
-		currGroup = []
 		# bubble left arr[i]
 		j = i
 		while j != 0 and arrCopy[j] < arrCopy[j - 1]:
-			currGroup.append((j, j - 1))
+			tuples.append((j, j - 1))
 			arrCopy[j], arrCopy[j - 1] = arrCopy[j - 1], arrCopy[j]
 			j = j - 1
-		states.append(arrCopy.copy())
 	global idx
 	idx = 0
-	directPlot()
+	swap()
 
 '''
 Merge sort
