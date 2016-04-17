@@ -1,35 +1,58 @@
-# TODO: finish quick sort, bubble sort, shell sort, comb sort, counting sort, bucket sort, radix sort
 import numpy as np
 import random
 import time
-from tkinter import *
+try:
+	from tkinter import *
+except:
+	from Tkinter import *
 from heapq import heapify, heappop
+try:
+	from queue import Queue
+except:
+	from Queue import Queue
 
 '''
 Constants for the canvas
 '''
-NUM_BAR = 100 # Size of the array
-CANVAS_WIDTH = 1000
-CANVAS_HEIGHT = 500
-CANVAS_OFFSET = 20
+NUM_BAR = 300 # Size of the array
+CANVAS_WIDTH = 800
+CANVAS_HEIGHT = 400
+CANVAS_OFFSET = 100
 PAUSE_MILLISECOND = 1
-FILL_COLORS = ['black', 'blue', 'orange']
-BAR_WIDTH = CANVAS_WIDTH / NUM_BAR
+BACKGROUND_COLOR = 'black'
+FOREGROUND_COLOR = 'white'
 
 '''
 Creation of the canvas
 '''
 master = Tk()
-w = Canvas(master, width = CANVAS_WIDTH, height = CANVAS_HEIGHT + CANVAS_OFFSET, bg = 'black')
-w.pack()
-rects = [w.create_rectangle(BAR_WIDTH * i, CANVAS_HEIGHT, BAR_WIDTH * (i + 1), CANVAS_HEIGHT, fill = '#' + ('%06x' % random.randint(0, 16777215))) for i in range(NUM_BAR)]
-arr = [np.random.randint(0, CANVAS_HEIGHT) for i in range(NUM_BAR)]
-def visualizeArr():
-	for i in range(NUM_BAR):
-		w.coords(rects[i], (BAR_WIDTH * i, CANVAS_HEIGHT, BAR_WIDTH * (i + 1), CANVAS_HEIGHT - arr[i]))
-tuples = [(1, 2), (2, 3), (3, 1)]
+master.geometry('%dx%d+%d+%d' % (CANVAS_WIDTH + 2 * CANVAS_OFFSET, CANVAS_HEIGHT + 2 * CANVAS_OFFSET, 0, 0))
+w = Canvas(master, width = CANVAS_WIDTH, height = CANVAS_HEIGHT, bg = BACKGROUND_COLOR)
+w.place(x = CANVAS_OFFSET, y = CANVAS_OFFSET)
+
+tuples = []
 idx = 0
 states = []
+rects = []
+arr = np.array([])
+def initialize():
+	global rects
+	BAR_WIDTH = CANVAS_WIDTH / (NUM_BAR + 2)
+	rects = [w.create_rectangle(BAR_WIDTH * (i + 1), CANVAS_HEIGHT, BAR_WIDTH * (i + 2), CANVAS_HEIGHT, fill = FOREGROUND_COLOR) for i in range(NUM_BAR)]
+	global arr
+	arr = np.array([np.random.randint(0, CANVAS_HEIGHT) for i in range(NUM_BAR)])
+
+def visualizeArr():
+	BAR_WIDTH = CANVAS_WIDTH / (NUM_BAR + 2)
+	for i in range(NUM_BAR):
+		w.coords(rects[i], (BAR_WIDTH * (i + 1), CANVAS_HEIGHT, BAR_WIDTH * (i + 2), CANVAS_HEIGHT - arr[i]))
+
+'''
+Clean everything
+'''
+def cleanFill():
+	for i in range(NUM_BAR):
+		w.itemconfig(rects[i], fill = FOREGROUND_COLOR)
 
 '''
 Helper function that reads from the list tuples
@@ -37,17 +60,18 @@ Perform all those swaps and visualize
 '''
 def swap():
 	global idx
+	cleanFill()
 	if idx == len(tuples):
 		return
 	i, j = tuples[idx]
-	while i == j:
-		idx += 1
-		if idx == len(tuples):
-			return
-		i, j = tuples[idx]
+	try:
+		w.itemconfig(rects[i], fill = 'red')
+		w.itemconfig(rects[j], fill = 'red')
+	except:
+		'Do nothing'
 	arr[i], arr[j] = arr[j], arr[i]
-	visualizeArr()
 	idx += 1
+	visualizeArr()
 	w.after(PAUSE_MILLISECOND, swap)
 
 '''
@@ -212,6 +236,159 @@ def quickSort():
 	swap()
 
 '''
+Bubble sort
+At most n loops, each time swap two adjacent elements if their order is incorrect
+'''
+def bubbleSort():
+	global tuples
+	tuples = []
+	arrCopy = arr.copy()
+	finished = False
+	for iteration in range(NUM_BAR):
+		if not finished:
+			finished = True
+			for i in range(NUM_BAR - 1):
+				if arrCopy[i] > arrCopy[i + 1]:
+					finished = False
+					arrCopy[i], arrCopy[i + 1] = arrCopy[i + 1], arrCopy[i]
+					tuples.append((i, i + 1))
+	global idx
+	idx = 0
+	swap()
+
+'''
+Shell sort
+'''
+def shellSort():
+	gaps = [701, 301, 132, 57, 23, 10, 4, 1]
+	global tuples
+	tuples = []
+	arrCopy = arr.copy()
+	for gap in gaps:
+		# Do a gapped insertion sort for this gap size.
+		for i in range(gap, NUM_BAR):
+			j = i
+			while j >= gap and arrCopy[j] < arrCopy[j - gap]:
+				# Exchange j and j - gap
+				tuples.append((j, j - gap))
+				arrCopy[j], arrCopy[j - gap] = arrCopy[j - gap], arrCopy[j]
+				j -= gap
+	global idx
+	idx = 0
+	swap()
+
+'''
+Comb sort
+A variant of bubble sort, which instead of comparing the adjacent pairs,
+compare all pairs of a gap diminishing from size to 1
+'''
+def combSort():
+	global tuples
+	tuples = []
+	arrCopy = arr.copy()
+	finished = False
+	gap = NUM_BAR
+	shrinkingFactor = 1.3
+	while gap > 1 or not finished:
+		gap = int(gap / shrinkingFactor)
+		if gap < 1:
+			gap = 1
+		finished = True
+		for i in range(NUM_BAR - gap):
+			if arrCopy[i] > arrCopy[i + gap]:
+				finished = False
+				arrCopy[i], arrCopy[i + gap] = arrCopy[i + gap], arrCopy[i]
+				tuples.append((i, i + gap))
+	global idx
+	idx = 0
+	swap()
+
+'''
+Counting sort
+To visualize, each time we add a new element, refresh the screen
+'''
+def countingSort():
+	global states
+	states = []
+	counts = [0] * CANVAS_HEIGHT
+	for v in arr:
+		counts[v] += 1
+	currIdx = 0
+	for i in range(CANVAS_HEIGHT):
+		count = counts[i]
+		for j in range(count):
+			arr[currIdx + j] = i
+		currIdx += count
+		states.append(arr.copy())
+	global idx
+	idx = 0
+	directPlot()
+
+'''
+Bucket sort
+Go over the original array, putting each object in its bucket.
+Sort each non-empty bucket
+Visit the buckets in order and put all elements back into the original array
+'''
+def bucketSort():
+	bucketSize = 10
+	bucketNum = CANVAS_HEIGHT // bucketSize + 1
+	buckets = [[] for i in range(bucketNum)]
+	for v in arr:
+		buckets[v // bucketSize].append(v)
+	# Sort each bucket
+	for i in range(bucketNum):
+		bucketElements = buckets[i]
+		# Apply insertion sort
+		for j in range(1, len(bucketElements)):
+			k = j
+			while k != 0 and bucketElements[k] < bucketElements[k - 1]:
+				bucketElements[k], bucketElements[k - 1] = bucketElements[k - 1], bucketElements[k]
+				k = k - 1
+		buckets[i] = bucketElements
+	# Concatenate all results
+	global states
+	states = []
+	currIdx = 0
+	for i in range(bucketNum):
+		for j in range(len(buckets[i])):
+			arr[currIdx + j] = buckets[i][j]
+		currIdx += len(buckets[i])
+		states.append(arr.copy())
+	global idx
+	idx = 0
+	directPlot()
+
+'''
+Radix sort
+Display results after sorting each digit
+'''
+def radixSort():
+	base = 10
+	# Compute the longest element
+	global arr
+	maxLength = int(np.log(max(arr)) / np.log(base)) + 1
+	global states
+	states = []
+	# Construct queues to store the elements
+	queues = [Queue() for i in range(base)]
+	for l in range(maxLength):
+		# Enqueue each element
+		for v in arr:
+			queueId = (int(v) // (base ** l)) % base
+			queues[queueId].put(v)
+		# Dequeue each element in order
+		arr = np.array([])
+		for i in range(base):
+			currQueue = queues[i]
+			while not currQueue.empty():
+				arr = np.append(arr, currQueue.get())
+		states.append(arr.copy())
+	global idx
+	idx = 0
+	directPlot()
+
+'''
 Use Fisher-Yates shuffle algorithm to rearrange the array
 triggered by shuffle
 '''
@@ -221,17 +398,62 @@ def shuffle():
 		arr[i], arr[i + j] = arr[i + j], arr[i]
 	visualizeArr()
 
-btnShuffle = Button(text = 'Shuffle', command = shuffle)
-btnShuffle.pack()
-btnSelectionSort = Button(text = 'Selection sort', command = selectionSort)
-btnSelectionSort.pack()
-btnInsertionSort = Button(text = 'Insertion sort', command = insertionSort)
-btnInsertionSort.pack()
-btnMergeSort = Button(text = 'Merge sort', command = mergeSort)
-btnMergeSort.pack()
-btnHeapSort = Button(text = 'Heap sort', command = heapSort)
-btnHeapSort.pack()
-btnQuickSort = Button(text = 'Quick sort', command = quickSort)
-btnQuickSort.pack()
+initialize()
+def changeArraySize(event):
+	'''
+	By entering the array size, the user specifies how many swaps to display within one pause
+	'''
+	# Empty the original plot
+	global NUM_BAR
+	global rects
+	for k in range(NUM_BAR):
+		w.delete(rects[k])
+	NUM_BAR = int(str(ety.get()))
+	initialize()
+	shuffle()
+
+def changeColor(c):
+	def rtn():
+		w.configure(bg = c)
+	return rtn
+def changeForegroundColor(c):
+	def rtn():
+		global rects
+		for k in range(NUM_BAR):
+			w.delete(rects[k])
+		global FOREGROUND_COLOR
+		FOREGROUND_COLOR = c
+		initialize()
+		shuffle()
+	return rtn
+
+# Place the color options at the bottom of the screen
+colors = ['red', 'yellow', 'pink', 'green', 'purple', 'orange', 'blue']
+Label(text = 'Background color').place(x = 0, y = CANVAS_HEIGHT + CANVAS_OFFSET * 1.2)
+col = 2
+for c in colors:
+	Button(text = c, fg = c, bg = c, command = changeColor(c)).place(x = col * 60, y = CANVAS_HEIGHT + CANVAS_OFFSET * 1.2)
+	col += 1
+
+Label(text = 'Foreground color').place(x = 0, y = CANVAS_HEIGHT + CANVAS_OFFSET * 1.6)
+col = 2
+for c in colors:
+	Button(text = c, fg = c, bg = c, command = changeForegroundColor(c)).place(x = col * 60, y = CANVAS_HEIGHT + CANVAS_OFFSET * 1.6)
+	col += 1
+
+Label(text = 'Enter the array size:').place(x = CANVAS_OFFSET, y = 0)
+ety = Entry(master)
+ety.bind('<Return>', changeArraySize)
+ety.place(x = CANVAS_OFFSET, y = CANVAS_OFFSET * 0.5)
+Button(text = 'Shuffle', command = shuffle).place(x = CANVAS_OFFSET * 0.2, y = CANVAS_OFFSET)
+commands = [('Selection sort', selectionSort), ('Insertion sort', insertionSort),\
+		('Merge sort', mergeSort), ('Quick sort', quickSort),\
+		('Bubble sort', bubbleSort), ('Shell sort', shellSort),\
+		('Comb sort', combSort), ('Counting sort', countingSort),\
+		('Bucket sort', bucketSort), ('Radix sort', radixSort)]
+row = 2
+for key, cmd in commands:
+	Button(text = key, command = cmd).place(x = CANVAS_OFFSET * 0.0, y = row * 20 + CANVAS_OFFSET)
+	row += 1
 shuffle()
 mainloop()
