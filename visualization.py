@@ -317,7 +317,8 @@ def countingSort():
 		for j in range(count):
 			arr[currIdx + j] = i
 		currIdx += count
-		states.append(arr.copy())
+		if count > 0:
+			states.append(arr.copy())
 	global idx
 	idx = 0
 	directPlot()
